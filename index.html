@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FF Clone - Lobby</title>
+    
+    <!-- Model Viewer -->
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root { --gold: #ffd700; --cyan: #00e5ff; --orange: #ff8c00; --bg: rgba(0,0,0,0.85); }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Rajdhani', sans-serif; user-select: none; touch-action: none; }
+        body { overflow: hidden; width: 100vw; height: 100vh; background: #000; color: white; }
+
+        #lobby-master { position: absolute; width: 100%; height: 100%; z-index: 500; display: block; }
+        .master-bg {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
+            background: linear-gradient(-45deg, #0a0a0a, #1a1a1a, #0d1b2a, #200);
+            background-size: 400% 400%; animation: grad 15s ease infinite;
+        }
+        @keyframes grad { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+
+        .interactive { pointer-events: auto; cursor: pointer; transition: 0.1s; }
+        .interactive:active { transform: scale(0.95); }
+
+        .page { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 10; }
+        .active { display: block; animation: fadeIn 0.3s forwards; }
+        @keyframes fadeIn { from {opacity: 0;} to {opacity: 1;} }
+
+        .top-ui { position: fixed; top: 12px; width: 100%; display: flex; justify-content: space-between; padding: 0 40px; z-index: 600; }
+        .p-tag { background: rgba(0,0,0,0.7); border-left: 3px solid var(--gold); padding: 4px 12px; border-radius: 0 12px 0 0; display: flex; align-items: center; gap: 8px; }
+        .currency { display: flex; gap: 10px; }
+        .cur-box { background: rgba(0,0,0,0.7); border: 1px solid #444; padding: 3px 12px; border-radius: 4px; font-weight: 700; }
+
+        .side-menu { position: fixed; left: 20px; bottom: 85px; display: flex; flex-direction: column; gap: 6px; z-index: 600; }
+        .m-btn { width: 45px; height: 42px; background: rgba(30,30,30,0.9); border: 1px solid #555; border-radius: 6px; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 8px; color: #fff; text-transform: uppercase; }
+        .m-btn i { font-size: 16px; margin-bottom: 2px; }
+
+        .start-container { position: absolute; bottom: 15px; right: 40px; display: flex; flex-direction: column; align-items: flex-end; z-index: 600; }
+        .mode-selector { background: rgba(0,0,0,0.85); border: 1px solid #444; padding: 5px 15px; margin-bottom: 6px; display: flex; gap: 15px; font-weight: bold; font-size: 14px; }
+        .selected-mode { color: var(--gold); }
+        .map-bar { background: #222; color: #fff; padding: 4px 15px; font-size: 12px; margin-bottom: 4px; border-right: 4px solid var(--orange); }
+        .start-btn { width: 180px; height: 55px; background: linear-gradient(180deg, #ffeb3b, #f57c00); clip-path: polygon(15% 0, 100% 0, 100% 75%, 85% 100%, 0 100%, 0 25%); display: flex; justify-content: center; align-items: center; font-size: 28px; font-weight: 900; color: #3e2723; }
+
+        .grid-layout { display: flex; justify-content: center; align-items: center; gap: 20px; height: 100%; padding: 50px; overflow-y: auto; }
+        .item-card { width: 250px; height: 350px; background: rgba(255,255,255,0.05); border: 1px solid #333; border-radius: 10px; display: flex; flex-direction: column; position: relative; margin: 10px; }
+        .item-name { padding: 10px; text-align: center; background: rgba(0,0,0,0.5); font-weight: 800; color: var(--cyan); width: 100%; position: absolute; bottom: 0; }
+        .select-btn { position: absolute; top: 10px; right: 10px; background: var(--gold); color: black; padding: 5px 10px; border-radius: 5px; font-weight: bold; cursor: pointer; }
+
+        .back-h { position: absolute; top: 20px; left: 30px; z-index: 700; font-size: 20px; color: var(--gold); font-weight: 800; }
+        .p-view { display: flex; height: 100%; align-items: center; padding: 0 10%; }
+        .p-details { flex: 1; background: var(--bg); border: 1px solid #444; border-radius: 20px; padding: 40px; margin-left: 50px; }
+
+        #match-loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; display: none; flex-direction: column; justify-content: flex-end; align-items: center; padding-bottom: 50px; background-image: url('https://wallpapers.com/images/hd/free-fire-loading-screen-background-2f84x0j8q8r4x4x6.jpg'); background-size: cover; background-position: center; }
+        .load-bar-container { width: 80%; height: 10px; background: #333; border-radius: 5px; overflow: hidden; margin-top: 20px; }
+        .load-bar-fill { width: 0%; height: 100%; background: var(--gold); }
+
+        model-viewer { width: 100%; height: 100%; --poster-color: transparent; }
+    </style>
+</head>
+<body>
+
+    <div id="lobby-master">
+        <div class="master-bg"></div>
+        <div class="top-ui">
+            <div class="p-tag interactive" onclick="go('profile')">
+                <div style="width:30px; height:30px; background:#444; border:1px solid #fff;"></div>
+                <div>
+                    <div style="font-weight:800; font-size:14px;">ERFAN_ALLTIME</div>
+                    <div style="font-size:10px; color:var(--gold);">UID: 5566020</div>
+                </div>
+            </div>
+            <div class="currency">
+                <div class="cur-box interactive"><i class="fas fa-coins" style="color:var(--gold)"></i> 2.1M</div>
+                <div class="cur-box interactive"><i class="fas fa-gem" style="color:var(--cyan)"></i> 1,500</div>
+            </div>
+        </div>
+
+        <div id="lobby" class="page active">
+            <div class="side-menu">
+                <div class="m-btn interactive" onclick="go('store')" style="border-color:var(--cyan)"><i class="fas fa-shopping-cart" style="color:var(--cyan)"></i>Store</div>
+                <div class="m-btn interactive" onclick="go('weapon')"><i class="fas fa-gun"></i>Weapon</div>
+                <div class="m-btn interactive" onclick="go('character')"><i class="fas fa-tshirt"></i>Char</div>
+                <div class="m-btn interactive" onclick="go('pet')"><i class="fas fa-paw"></i>Pet</div>
+            </div>
+            
+            <model-viewer 
+                id="lobby-viewer"
+                src="https://cdn.jsdelivr.net/gh/erfanalltime-netizen/-3d-model@main/nxyy_ff.glb" 
+                camera-controls disable-zoom disable-pan shadow-intensity="2" environment-image="neutral" min-camera-orbit="auto 75deg auto" max-camera-orbit="auto 75deg auto" autoplay animation-name="0">
+            </model-viewer>
+            
+            <div class="start-container">
+                <div class="mode-selector">
+                    <div class="interactive selected-mode" onclick="setGroup('SOLO', this)">SOLO</div>
+                    <div class="interactive" onclick="setGroup('DUO', this)">DUO</div>
+                    <div class="interactive" onclick="setGroup('SQUAD', this)">SQUAD</div>
+                </div>
+                <div class="map-bar interactive">BERMUDA - REMASTERED</div>
+                <div class="start-btn interactive" onclick="startMatchSequence()">START</div>
+            </div>
+        </div>
+
+        <div id="weapon" class="page">
+            <div class="back-h interactive" onclick="go('lobby')"><i class="fas fa-arrow-left"></i> ARMORY</div>
+            <div class="grid-layout">
+                <div class="item-card"><model-viewer src="https://cdn.jsdelivr.net/gh/erfanalltime-netizen/-3d-model@main/p90__chrome.glb" camera-controls auto-rotate environment-image="neutral"></model-viewer><div class="item-name">P90 - CHROME</div></div>
+                <div class="item-card"><model-viewer src="https://cdn.jsdelivr.net/gh/erfanalltime-netizen/-3d-model@main/ump_free_fire.glb" camera-controls auto-rotate environment-image="neutral"></model-viewer><div class="item-name">UMP - LION</div></div>
+                <div class="item-card"><model-viewer src="https://cdn.jsdelivr.net/gh/erfanalltime-netizen/-3d-model@main/7c9bacf0b67b44d0a90cc5c12304b8b6.glb" camera-controls auto-rotate environment-image="neutral"></model-viewer><div class="item-name">PHANTOM - SKS</div></div>
+            </div>
+        </div>
+
+        <div id="store" class="page">
+            <div class="back-h interactive" onclick="go('lobby')"><i class="fas fa-arrow-left"></i> STORE</div>
+            <div class="grid-layout">
+                <div class="item-card"><model-viewer src="https://cdn.jsdelivr.net/gh/erfanalltime-netizen/-3d-model@main/the_best_skins_free_fire_by__sheepx777.glb" camera-controls auto-rotate environment-image="neutral"></model-viewer><div class="item-name">LEGENDARY SKIN</div></div>
+                <div class="item-card"><model-viewer src="https://cdn.jsdelivr.net/gh/erfanalltime-netizen/-3d-model@main/free_fire_death_guardian.glb" camera-controls auto-rotate environment-image="neutral"></model-viewer><div class="item-name">DEATH GUARDIAN</div></div>
+            </div>
+        </div>
+
+        <div id="character" class="page">
+            <div class="back-h interactive" onclick="go('lobby')"><i class="fas fa-arrow-left"></i> CHARACTERS</div>
+            <div class="grid-layout">
+                <div class="item-card"><model-viewer src="https://cdn.jsdelivr.net/gh/erfanalltime-netizen/-3d-model@main/nxyy_ff.glb" camera-controls auto-rotate environment-image="neutral"></model-viewer><div class="item-name">KELLY</div><div class="select-btn" onclick="selectChar('https://cdn.jsdelivr.net/gh/erfanalltime-netizen/-3d-model@main/nxyy_ff.glb')">SELECT</div></div>
+                <div class="item-card"><model-viewer src="https://cdn.jsdelivr.net/gh/erfanalltime-netizen/-3d-model@main/the_best_skins_free_fire_by__sheepx777.glb" camera-controls auto-rotate environment-image="neutral"></model-viewer><div class="item-name">COBRA</div><div class="select-btn" onclick="selectChar('https://cdn.jsdelivr.net/gh/erfanalltime-netizen/-3d-model@main/the_best_skins_free_fire_by__sheepx777.glb')">SELECT</div></div>
+            </div>
+        </div>
+
+        <div id="profile" class="page">
+            <div class="back-h interactive" onclick="go('lobby')"><i class="fas fa-arrow-left"></i> PLAYER INFO</div>
+            <div class="p-view">
+                <div style="width:40%; height:90%;"><model-viewer src="https://cdn.jsdelivr.net/gh/erfanalltime-netizen/-3d-model@main/nxyy_ff.glb" camera-controls disable-zoom shadow-intensity="1" environment-image="neutral"></model-viewer></div>
+                <div class="p-details"><h1>ERFAN_ALLTIME</h1><div style="margin-top:20px; display:grid; grid-template-columns: 1fr 1fr; gap:20px; font-size:20px;"><div>RANK: <span style="color:var(--gold)">MASTER</span></div><div>LVL: <span style="color:var(--gold)">72</span></div></div></div>
+            </div>
+        </div>
+        <div id="pet" class="page"><div class="back-h interactive" onclick="go('lobby')"><i class="fas fa-arrow-left"></i> PET</div></div>
+    </div>
+
+    <div id="match-loader">
+        <h2 style="color:white; letter-spacing: 5px;">BERMUDA</h2>
+        <p style="color:#aaa;">Loading match assets...</p>
+        <div class="load-bar-container"><div class="load-bar-fill" id="load-progress"></div></div>
+    </div>
+
+    <script>
+        function go(id) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            const topUi = document.querySelector('.top-ui');
+            if(id === 'lobby') topUi.style.display = 'flex'; else topUi.style.display = 'none';
+        }
+
+        function setGroup(mode, el) {
+            document.querySelectorAll('.mode-selector div').forEach(d => d.classList.remove('selected-mode'));
+            el.classList.add('selected-mode');
+        }
+
+        function selectChar(url) {
+            const viewer = document.getElementById('lobby-viewer');
+            viewer.src = url;
+            go('lobby'); 
+        }
+
+        function startMatchSequence() {
+            document.getElementById('match-loader').style.display = 'flex';
+            let progress = 0;
+            const bar = document.getElementById('load-progress');
+            const interval = setInterval(() => {
+                progress += Math.random() * 10;
+                bar.style.width = progress + '%';
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    // REDIRECT TO GAME FILE
+                    window.location.href = "game.html"; 
+                }
+            }, 100);
+        }
+    </script>
+</body>
+</html>
